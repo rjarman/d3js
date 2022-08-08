@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<head>
+  <link rel="stylesheet" href="fonts.css" />
+</head>
+<div id="div_template"></div>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="data.js"></script>
+<script src="data2.js"></script>
+<script>
+  const data = dataset2;
+  const width = 960;
+  const height = 500;
+  const margin = { top: 20, right: 50, bottom: 40, left: 65 };
+  const textColor = '#767676';
+
+  const monthMap = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
+  const svg = d3
+    .select('#div_template')
+    .append('svg')
+    .attr('viewBox', [0, 0, width, height]);
+
+  const x = d3
+    .scaleBand()
+    .domain(data.map((d) => d.year))
+    .rangeRound([margin.left, width - margin.right])
+    .padding(0.1);
+
+  const y1 = d3
+    .scaleLinear()
+    .domain([0, d3.max(data, (d) => d.sales)])
+    .rangeRound([height - margin.bottom, margin.top]);
+
+  const y2 = d3
+    .scaleLinear()
+    .domain(d3.extent(data, (d) => d.efficiency))
+    .rangeRound([height - margin.bottom, margin.top]);
+
+  const xAxis = (g) =>
+    g
+      .attr('transform', `translate(0,${height - margin.bottom})`)
+      .call(
+        d3
+          .axisBottom(x)
+          .tickFormat(
+            (d) =>
+              `${String(monthMap[0])} ${String(d).slice(-2)[0]}${
+                String(d).slice(-1)[0]
+              }`
+          )
+          .tickSizeOuter(0)
+      )
+      .call((g) =>
+        g
+          .selectAll('text')
+          .attr('transform', 'rotate(-90)')
+          .attr('dx', '-2.5em')
+          .attr('dy', '-.65em')
+          .attr('fill', textColor)
+      )
+      .call((g) => g.selectAll('.domain').remove())
+      .call((g) => g.selectAll('line').remove());
+
+  const y1Axis = (g) =>
+    g
+      .call(
+        d3.axisLeft(y1).tickFormat(
+          (d) =>
+            `$${parseInt(d)
+              .toString()
+              .replace(/\B(?=(\d{3})+(?!\d))/g, '’')}`
+        )
+      )
+      .attr('transform', `translate(${margin.left},0)`)
+      .style('color', textColor)
+      .call((g) => g.select('.domain').remove())
+      .call((g) => g.selectAll('line').remove())
+      .call((g) =>
+        g
+          .append('text')
+          .attr('x', -margin.left)
+          .attr('y', 10)
+          .attr('fill', 'currentColor')
+          .attr('text-anchor', 'start')
+          .text('New cars sold')
+      )
+      .call((g) => g.selectAll('text').attr('fill', textColor));
+
+  const y2Axis = (g) =>
+    g
+      .attr('transform', `translate(${width - margin.right},0)`)
+      .style('color', textColor)
+      .call(
+        d3.axisRight(y2).tickFormat(
+          (d) =>
+            `↑${parseInt(d)
+              .toString()
+              .replace(/\B(?=(\d{3})+(?!\d))/g, '’')}mpg`
+        )
+      )
+      .call((g) => g.select('.domain').remove())
+      .call((g) => g.selectAll('line').remove())
+      .call((g) =>
+        g
+          .append('text')
+          .attr('x', margin.right)
+          .attr('y', 10)
+          .attr('fill', 'currentColor')
+          .attr('text-anchor', 'end')
+          .text('Avg. fuel efficiency')
+      )
+      .call((g) => g.selectAll('text').attr('fill', textColor));
+
+  const line = d3
+    .line()
+    .x((d) => x(d.year) + x.bandwidth() / 2)
+    .y((d) => y2(d.efficiency))
+    .curve(d3.curveCatmullRom.alpha(0.5));
+
+  svg
+    .append('g')
+    .attr('fill', '#83c5be')
+    .attr('fill-opacity', 0.8)
+    .selectAll('rect')
+    .data(data)
+    .enter()
+    .append('rect')
+    .attr('x', (d) => x(d.year))
+    .attr('width', x.bandwidth())
+    .attr('y', (d) => y1(d.sales))
+    .attr('height', (d) => y1(0) - y1(d.sales));
+
+  svg
+    .selectAll('.line')
+    .data(data)
+    .enter()
+    .append('path')
+    .attr('d', () => {
+      const lineValues = line(data).slice(1);
+      const splitedValues = lineValues.split(',');
+
+      return `M0 ${height - 40} ${lineValues} l0 ${
+        height - 40 - splitedValues[splitedValues.length - 1]
+      }`;
+    })
+    .style('fill', 'url(#gradient)');
+
+  svg
+    .selectAll('.line')
+    .data(data)
+    .enter()
+    .append('path')
+    .attr('d', line(data))
+    .attr('stroke-width', '2')
+    .style('fill', 'none')
+    .attr('stroke', '#CC0000');
+
+  svg
+    .append('g')
+    .attr('fill', 'none')
+    .attr('pointer-events', 'all')
+    .selectAll('rect')
+    .data(data)
+    .enter()
+    .append('rect')
+    .attr('x', (d) => x(d.year))
+    .attr('width', x.bandwidth())
+    .attr('y', 0)
+    .attr('height', height)
+    .append('title')
+    .text(
+      (d) => `${d.year}
+${d.sales.toLocaleString('en')} new cars sold
+${d.efficiency.toLocaleString('en')} mpg average fuel efficiency`
+    );
+
+  svg.append('g').call(xAxis);
+
+  svg.append('g').call(y1Axis);
+
+  svg.append('g').call(y2Axis);
+
+  const createGradient = (select) => {
+    const gradient = select
+      .select('defs')
+      .append('linearGradient')
+      .attr('id', 'gradient')
+      .attr('x1', '100%')
+      .attr('y1', '100%')
+      .attr('x2', '100%')
+      .attr('y2', '100%');
+
+    gradient
+      .append('stop')
+      .attr('offset', '0%')
+      .attr('style', 'stop-color:#FF2626;stop-opacity:0.005');
+
+    gradient
+      .append('stop')
+      .attr('offset', '100%')
+      .attr('style', 'stop-color:#FF2626;stop-opacity:.005');
+  };
+  svg.append('defs');
+  svg.call(createGradient);
+</script>

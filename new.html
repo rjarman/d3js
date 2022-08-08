@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<head>
+  <link rel="stylesheet" href="fonts.css" />
+</head>
+<div id="div_template">
+  <!-- <svg width="960" height="500"></svg> -->
+</div>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="data.js"></script>
+<script>
+  const lineChartData = [
+    {
+      currency: 'USD',
+      values: [
+        {
+          date: '2018/01/01',
+          close: 230,
+        },
+        {
+          date: '2018/02/01',
+          close: 269,
+        },
+        {
+          date: '2018/03/01',
+          close: 234,
+        },
+        {
+          date: '2018/04/01',
+          close: 282,
+        },
+        {
+          date: '2018/05/01',
+          close: 231,
+        },
+        {
+          date: '2018/06/01',
+          close: 240,
+        },
+        {
+          date: '2018/07/01',
+          close: 213,
+        },
+        {
+          date: '2018/08/01',
+          close: 320,
+        },
+        {
+          date: '2018/09/01',
+          close: 253,
+        },
+        {
+          date: '2018/10/01',
+          close: 264,
+        },
+        {
+          date: '2018/11/01',
+          close: 272,
+        },
+        {
+          date: '2018/12/01',
+          close: 290,
+        },
+      ],
+    },
+  ];
+  const sampleData = [{ values: {} }];
+  const parseTime = d3.timeParse('%Y-%m-%d');
+  const formatTime = d3.timeFormat('%d-%m-%y');
+  let parsedData = sampleData.map((company) => ({
+    values: dataset.map((val) => ({
+      close: val.value,
+      date: parseTime(val.date),
+    })),
+  }));
+
+  const monthMap = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  width = 960;
+  height = 500;
+  var svg = d3
+      .select('#div_template')
+      .append('svg')
+      .attr('width', width)
+      .attr('height', height),
+    margin = { top: 20, right: 60, bottom: 100, left: 50 },
+    width = width - margin.left - margin.right,
+    height = height - margin.top - margin.bottom,
+    gRoot = svg
+      .append('g')
+      .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+
+  var formatNumber = d3.format('.1f');
+
+  var xScale = d3
+    .scaleTime()
+    .domain([
+      d3.min(parsedData, (d) => d3.min(d.values, (v) => v.date)),
+      d3.max(parsedData, (d) => d3.max(d.values, (v) => v.date)),
+    ])
+    .range([0, width]);
+
+    var yScale = d3
+    .scaleLinear()
+    .domain([
+      d3.min(parsedData, (d) => d3.min(d.values, (v) => v.close)),
+      d3.max(parsedData, (d) => d3.max(d.values, (v) => v.close)),
+    ])
+    .range([height, 0])
+    .nice();
+  var yScale2 = d3
+    .scaleLinear()
+    .domain([
+      d3.min(parsedData, (d) => d3.min(d.values, (v) => v.close)),
+      d3.max(parsedData, (d) => d3.max(d.values, (v) => v.close)),
+    ])
+    .range([height, 0])
+    .nice();
+
+  var xAxis = d3
+    .axisBottom(xScale)
+    .tickFormat(
+      (d) =>
+        `${String(monthMap[d.getMonth()])} ${
+          String(d.getFullYear()).slice(-2)[0]
+        }${String(d.getFullYear()).slice(-1)[0]}`
+    );
+
+    var yAxis = d3
+    .axisRight(yScale)
+    .tickSize(width)
+    .tickFormat(
+      (d) =>
+        `$${parseInt(d)
+          .toString()
+          .replace(/\B(?=(\d{3})+(?!\d))/g, '’')}`
+    );
+
+  var yAxis2 = d3
+    .axisLeft(yScale)
+    .tickSize(width)
+    .tickFormat(
+      (d) =>
+        `$${parseInt(d)
+          .toString()
+          .replace(/\B(?=(\d{3})+(?!\d))/g, '’')}`
+    );
+
+  const createGradient = (select) => {
+    const gradient = select
+      .select('defs')
+      .append('linearGradient')
+      .attr('id', 'gradient')
+      .attr('x1', '0%')
+      .attr('y1', '100%')
+      .attr('x2', '0%')
+      .attr('y2', '0%');
+
+    gradient
+      .append('stop')
+      .attr('offset', '0%')
+      .attr('style', 'stop-color:#FF2626;stop-opacity:0.05');
+
+    gradient
+      .append('stop')
+      .attr('offset', '100%')
+      .attr('style', 'stop-color:#FF2626;stop-opacity:.05');
+  };
+
+  const line = d3
+    .line()
+    .x((d) => xScale(d.date))
+    .y((d) => yScale(d.close))
+    .curve(d3.curveCatmullRom.alpha(0.5));
+
+  gRoot
+    .selectAll('.line')
+    .data(parsedData)
+    .enter()
+    .append('path')
+    .attr('d', (d) => {
+      console.log(d)
+      const lineValues = line(d.values).slice(1);
+      const splitedValues = lineValues.split(',');
+
+      return `M0 ${height} ${lineValues} l0 ${
+        height - splitedValues[splitedValues.length - 1]
+      }`;
+    })
+    .style('fill', 'url(#gradient)');
+
+  gRoot
+    .selectAll('.line')
+    .data(parsedData)
+    .enter()
+    .append('path')
+    .attr('d', (d) => line(d.values))
+    .attr('stroke-width', '2')
+    .style('fill', 'none')
+    .attr('stroke', '#CC0000');
+  gRoot.append('defs');
+  gRoot.call(createGradient);
+
+  // gRoot
+  //   .selectAll('dataCircles')
+  //   .data(parsedData[0].values)
+  //   .enter()
+  //   .append('circle')
+  //   .attr('cx', (d) => xScale(d.date))
+  //   .attr('cy', (d) => yScale(d.close))
+  //   .attr('fill', 'white')
+  //   .attr('stroke', 'red')
+  //   .attr('r', 5)
+  //   .attr('stroke-width', 3)
+  //   .attr('stroke-opacity', '20%')
+  //   .style('cursor', 'pointer');
+
+  gRoot
+    .append('g')
+    .attr('transform', 'translate(0,' + height + ')')
+    .call(customXAxis)
+    .selectAll('line')
+    .remove();
+
+  gRoot.append('g').call(customYAxis);
+  gRoot.append('g').call(customYAxis2);
+  gRoot
+    .selectAll('text')
+    .attr('font-family', 'futura')
+    .attr('font-size', '10.24px');
+
+  function customXAxis(g) {
+    g.call(xAxis);
+    g.select('.domain').remove();
+    g.selectAll('text')
+      .style('text-anchor', 'end')
+      .attr('dx', '-1.8em')
+      .attr('dy', '.15em')
+      .attr('transform', 'rotate(-90)')
+      .attr('fill', '#767676');
+  }
+
+function customYAxis(g) {
+  g.call(yAxis);
+  g.select('.domain').remove();
+  g.selectAll('.tick line')
+    .attr('stroke', '#A5A5A5')
+    .attr('stroke-dasharray', '6, 5');
+  g.selectAll('.tick text')
+    .attr('x', -50)
+    .attr('dy', 3)
+    .attr('fill', '#767676');
+}
+
+function customYAxis2(g) {
+  g.call(yAxis2);
+  g.attr("transform", "translate(" + (width+0) + " ,0)")
+  g.select('.domain').remove();
+  g.selectAll('.tick line')
+    .attr('stroke', '#A5A5A5')
+    .attr('stroke-dasharray', '6, 5');
+  g.selectAll('.tick text')
+    .attr('x', 50)
+    .attr('dy', 3)
+    .attr('fill', '#767676');
+}
+
+  var Tooltip = d3
+    .select('#div_template')
+    .append('div')
+    .style('opacity', 0)
+    .attr('class', 'tooltip')
+    .style('background-color', 'white')
+    .style('border', 'solid')
+    .style('border-width', '2px')
+    .style('border-radius', '5px')
+    .style('position', 'absolute')
+    .style('padding', '5px');
+
+  var mouseover = function (d) {
+    console.log('mouseover', d);
+    Tooltip.style('opacity', 1);
+    // d3.select(this).style('stroke', 'black').style('opacity', 1);
+  };
+  var mousemove = function (d) {
+    Tooltip.html(
+      `
+      <p>Total <span style="font-weight: bold;">cost</span>: ${d.close}</p>
+      <p><span style="font-weight: bold;">Date</span> of the cost: ${formatTime(
+        d.date
+      )}</p>
+    `
+    )
+      .style('left', d3.mouse(this)[0] + 70 + 'px')
+      .style('top', d3.mouse(this)[1] + 'px');
+  };
+  var mouseleave = function (d) {
+    Tooltip.style('opacity', 0);
+    // d3.select(this).style('stroke', 'none').style('opacity', 0.8);
+  };
+  gRoot
+    .selectAll('circle')
+    .on('mouseover', mouseover)
+    .on('mousemove', mousemove)
+    .on('mouseleave', mouseleave);
+</script>
